@@ -1,12 +1,14 @@
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, Request, HTTPException, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
-from app.models.resume import Resume
+from app.models.resume import Resume, PersonalInfo, WorkExperience, Education, Project, SkillCategory, Certification
 from app.models.samples import SAMPLE_RESUMES
+from app.profile_importer import fetch_github_projects, parse_linkedin_profile, extract_github_username, extract_linkedin_username
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -21,6 +23,12 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 # Jinja2 templates directory
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+
+class ProfileImportRequest(BaseModel):
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    base_resume: Optional[Dict[str, Any]] = None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -74,3 +82,50 @@ async def render_resume(request: Request, resume: Resume = Body(...)):
 async def export_resume_json(resume: Resume = Body(...)):
     """Validate and return JSON resume data for export/download."""
     return JSONResponse(content=resume.model_dump())
+
+
+@app.post("/api/import-profile")
+async def import_profile(req: ProfileImportRequest = Body(...)):
+    """Import and build/enrich a CV from optional LinkedIn and GitHub profile links."""
+    base_data = req.base_resume or SAMPLE_RESUMES.get("it", {}).copy()
+
+    # Ensure nested structures
+    personal = base_data.get("personal_info", {})
+    projects = base_data.get("projects", [])
+
+    # Process GitHub URL
+    if req.github_url:
+        gh_user = extract_github_username(req.github_url)
+        if gh_user:
+            personal["github"] = f"github.com/{gh_user}"
+            gh_projects = await fetch_github_projects(req.github_url)
+            if gh_projects:
+                # Merge or overwrite projects
+                projects = gh_projects + [p for p in projects if p.get("name") not in [gp["name"] for gp in gh_projects]]
+
+    # Process LinkedIn URL
+    if req.linkedin_url:
+        li_data = parse_linkedin_profile(req.linkedin_url)
+        if li_data:
+            if li_data.get("full_name") and (not personal.get("full_name") or personal.get("full_name") == "Jane Doe"):
+                personal["full_name"] = li_data["full_name"]
+            if li_data.get("headline"):
+                personal["headline"] = li_data["headline"]
+            if li_data.get("linkedin"):
+                personal["linkedin"] = li_data["linkedin"]
+            if li_data.get("summary") and not base_data.get("summary"):
+                base_data["summary"] = li_data["summary"]
+            if li_data.get("experience") and not base_data.get("experience"):
+                base_data["experience"] = li_data["experience"]
+            if li_data.get("education") and not base_data.get("education"):
+                base_data["education"] = li_data["education"]
+
+    base_data["personal_info"] = personal
+    base_data["projects"] = projects
+
+    # Validate against Resume model
+    try:
+        validated_resume = Resume(**base_data)
+        return JSONResponse(content=validated_resume.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to build resume from profile: {str(e)}")
