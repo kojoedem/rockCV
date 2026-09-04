@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ resume.personal_info.full_name }} - Portfolio Resume</title>
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 11pt;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-800 p-8 max-w-4xl mx-auto font-sans leading-relaxed">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <!-- Sidebar Column -->
+        <div class="md:col-span-4 bg-pink-50 p-5 rounded-xl border border-pink-100 space-y-6">
+            <!-- Name & Title -->
+            <div>
+                <h1 class="text-2xl font-black text-pink-700 tracking-tight leading-tight">{{ resume.personal_info.full_name }}</h1>
+                {% if resume.personal_info.headline %}
+                    <p class="text-xs font-bold uppercase text-gray-700 mt-1 tracking-wider">{{ resume.personal_info.headline }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Contact Information -->
+            <div class="text-xs space-y-2 text-gray-700 font-medium">
+                <h2 class="text-xs font-black uppercase text-pink-800 tracking-wider border-b border-pink-200 pb-1">Contact</h2>
+                {% if resume.personal_info.email %}<div class="break-all">📧 {{ resume.personal_info.email }}</div>{% endif %}
+                {% if resume.personal_info.phone %}<div>📞 {{ resume.personal_info.phone }}</div>{% endif %}
+                {% if resume.personal_info.location %}<div>📍 {{ resume.personal_info.location }}</div>{% endif %}
+                {% if resume.personal_info.website %}<div class="break-all text-pink-700 underline">🌐 {{ resume.personal_info.website }}</div>{% endif %}
+                {% if resume.personal_info.linkedin %}<div class="break-all">💼 {{ resume.personal_info.linkedin }}</div>{% endif %}
+            </div>
+
+            <!-- Skills -->
+            {% if resume.skills %}
+            <div class="space-y-3">
+                <h2 class="text-xs font-black uppercase text-pink-800 tracking-wider border-b border-pink-200 pb-1">Core Skills</h2>
+                {% for cat in resume.skills %}
+                <div>
+                    <span class="font-bold text-xs text-gray-900 block mb-1">{{ cat.category }}</span>
+                    <div class="flex flex-wrap gap-1">
+                        {% for item in cat['items'] %}
+                        <span class="bg-pink-200 text-pink-900 px-2 py-0.5 rounded text-[10px] font-semibold">{{ item }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Certifications -->
+            {% if resume.certifications %}
+            <div class="space-y-2 text-xs">
+                <h2 class="text-xs font-black uppercase text-pink-800 tracking-wider border-b border-pink-200 pb-1">Certifications</h2>
+                {% for cert in resume.certifications %}
+                <div>
+                    <span class="font-bold text-gray-900 block">{{ cert.name }}</span>
+                    {% if cert.issuer %}<span class="text-gray-600 block text-[11px]">{{ cert.issuer }}</span>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Column -->
+        <div class="md:col-span-8 space-y-6">
+            <!-- Summary -->
+            {% if resume.summary %}
+            <section>
+                <h2 class="text-sm font-black uppercase tracking-wider text-pink-700 border-b-2 border-pink-500 pb-1 mb-2">About Me</h2>
+                <p class="text-xs text-gray-700 leading-normal">{{ resume.summary }}</p>
+            </section>
+            {% endif %}
+
+            <!-- Experience -->
+            {% if resume.experience %}
+            <section>
+                <h2 class="text-sm font-black uppercase tracking-wider text-pink-700 border-b-2 border-pink-500 pb-1 mb-3">Work Experience</h2>
+                <div class="space-y-4">
+                    {% for item in resume.experience %}
+                    <div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="font-bold text-gray-900 text-sm">{{ item.title }}</span>
+                            <span class="text-xs font-semibold text-pink-600 bg-pink-50 px-2 py-0.5 rounded">{{ item.dates }}</span>
+                        </div>
+                        <div class="text-xs font-semibold text-gray-600 italic mb-1">
+                            {{ item.company }}{% if item.location %}, {{ item.location }}{% endif %}
+                        </div>
+                        {% if item.highlights %}
+                        <ul class="list-disc list-outside text-xs text-gray-700 space-y-1 ml-4">
+                            {% for hl in item.highlights %}
+                            <li>{{ hl }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Projects / Creative Campaigns -->
+            {% if resume.projects %}
+            <section>
+                <h2 class="text-sm font-black uppercase tracking-wider text-pink-700 border-b-2 border-pink-500 pb-1 mb-3">Featured Projects & Campaigns</h2>
+                <div class="space-y-3 text-xs">
+                    {% for proj in resume.projects %}
+                    <div class="border-l-2 border-pink-400 pl-3">
+                        <div class="flex justify-between items-baseline">
+                            <span class="font-bold text-gray-900 text-xs">{{ proj.name }}</span>
+                            {% if proj.link %}<a href="{{ proj.link }}" target="_blank" class="text-pink-600 underline font-semibold">{{ proj.link }}</a>{% endif %}
+                        </div>
+                        {% if proj.description %}<p class="text-gray-700 mt-0.5">{{ proj.description }}</p>{% endif %}
+                        {% if proj.technologies %}<p class="text-pink-800 text-[11px] font-semibold mt-0.5">Tools: {{ proj['technologies'] | join(', ') }}</p>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Education -->
+            {% if resume.education %}
+            <section>
+                <h2 class="text-sm font-black uppercase tracking-wider text-pink-700 border-b-2 border-pink-500 pb-1 mb-2">Education</h2>
+                <div class="space-y-2 text-xs">
+                    {% for edu in resume.education %}
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-bold text-gray-900 block">{{ edu.degree }}</span>
+                            <span class="text-gray-600">{{ edu.institution }}</span>
+                            {% if edu.details %}<p class="text-gray-500 italic text-[11px]">{{ edu.details }}</p>{% endif %}
+                        </div>
+                        <span class="text-pink-600 font-semibold">{{ edu.dates }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
