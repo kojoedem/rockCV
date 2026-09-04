@@ -3,6 +3,7 @@
 let currentResumeData = {
     title: "Professional Resume",
     template: "modern_tech",
+    max_pages: 1,
     personal_info: {
         full_name: "",
         headline: "",
@@ -59,9 +60,16 @@ function initEventListeners() {
         });
     }
 
+    // Extend Page Button (Consent Prompt for Extension up to 3 Pages)
+    const extendPageBtn = document.getElementById('extend-page-btn');
+    if (extendPageBtn) {
+        extendPageBtn.addEventListener('click', handlePageExtensionRequest);
+    }
+
     // Form inputs live sync
     document.getElementById('resume-form').addEventListener('input', () => {
         collectFormData();
+        checkContentOverflowAndPrompt();
         renderPreviewDebounced();
     });
 
@@ -173,6 +181,9 @@ function populateForm(data) {
     document.getElementById('info-linkedin').value = data.personal_info?.linkedin || '';
     document.getElementById('info-github').value = data.personal_info?.github || '';
 
+    currentResumeData.max_pages = data.max_pages || 1;
+    updatePageBadge();
+
     // Summary
     document.getElementById('info-summary').value = data.summary || '';
 
@@ -199,12 +210,57 @@ function populateForm(data) {
     (data.certifications || []).forEach(cert => addCertItem(cert));
 }
 
+function handlePageExtensionRequest() {
+    const currentMax = currentResumeData.max_pages || 1;
+    if (currentMax >= 3) {
+        alert("Maximum resume limit is set to 3 pages. Professional standard resumes should not exceed 3 pages.");
+        return;
+    }
+
+    const nextPages = currentMax + 1;
+    const agree = confirm(`Your current CV information is expanding. Do you agree to add Page ${nextPages} (Up to a maximum of 3 pages)?`);
+    if (agree) {
+        currentResumeData.max_pages = nextPages;
+        updatePageBadge();
+        renderPreview();
+    }
+}
+
+let overflowPrompted = false;
+function checkContentOverflowAndPrompt() {
+    const totalItems = (currentResumeData.experience?.length || 0) +
+                       (currentResumeData.education?.length || 0) +
+                       (currentResumeData.projects?.length || 0);
+
+    // If experience + education + projects exceeds 6 items and max_pages is still 1
+    if (totalItems > 6 && currentResumeData.max_pages === 1 && !overflowPrompted) {
+        overflowPrompted = true;
+        setTimeout(() => {
+            const agree = confirm("Your CV content appears lengthy and may overflow 1 page. Do you agree to extend your resume layout to 2 pages (max 3 pages allowed)?");
+            if (agree) {
+                currentResumeData.max_pages = 2;
+                updatePageBadge();
+                renderPreview();
+            }
+        }, 300);
+    }
+}
+
+function updatePageBadge() {
+    const badge = document.getElementById('page-count-badge');
+    if (badge) {
+        const pages = currentResumeData.max_pages || 1;
+        badge.textContent = `${pages} Page${pages > 1 ? 's' : ''} Allowed (Max 3)`;
+    }
+}
+
 function collectFormData() {
     const templateSelect = document.getElementById('template-select');
 
     currentResumeData = {
         title: "Professional Resume",
         template: templateSelect ? templateSelect.value : "modern_tech",
+        max_pages: currentResumeData.max_pages || 1,
         personal_info: {
             full_name: document.getElementById('info-name').value,
             headline: document.getElementById('info-headline').value,

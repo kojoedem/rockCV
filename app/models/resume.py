@@ -43,6 +43,7 @@ class Certification(BaseModel):
 class Resume(BaseModel):
     title: Optional[str] = "Professional Resume"
     template: str = Field("modern_tech", json_schema_extra={"example": "accounting_corporate"})
+    max_pages: int = Field(1, ge=1, le=3, json_schema_extra={"example": 1})
     personal_info: PersonalInfo
     summary: Optional[str] = None
     experience: List[WorkExperience] = Field(default_factory=list)

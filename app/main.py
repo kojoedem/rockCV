@@ -100,24 +100,23 @@ async def import_profile(req: ProfileImportRequest = Body(...)):
             personal["github"] = f"github.com/{gh_user}"
             gh_projects = await fetch_github_projects(req.github_url)
             if gh_projects:
-                # Merge or overwrite projects
-                projects = gh_projects + [p for p in projects if p.get("name") not in [gp["name"] for gp in gh_projects]]
+                projects = gh_projects
 
     # Process LinkedIn URL
     if req.linkedin_url:
         li_data = parse_linkedin_profile(req.linkedin_url)
         if li_data:
-            if li_data.get("full_name") and (not personal.get("full_name") or personal.get("full_name") == "Jane Doe"):
+            if li_data.get("full_name"):
                 personal["full_name"] = li_data["full_name"]
             if li_data.get("headline"):
                 personal["headline"] = li_data["headline"]
             if li_data.get("linkedin"):
                 personal["linkedin"] = li_data["linkedin"]
-            if li_data.get("summary") and not base_data.get("summary"):
+            if li_data.get("summary"):
                 base_data["summary"] = li_data["summary"]
-            if li_data.get("experience") and not base_data.get("experience"):
+            if li_data.get("experience"):
                 base_data["experience"] = li_data["experience"]
-            if li_data.get("education") and not base_data.get("education"):
+            if li_data.get("education"):
                 base_data["education"] = li_data["education"]
 
     base_data["personal_info"] = personal
