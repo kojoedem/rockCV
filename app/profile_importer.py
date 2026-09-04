@@ -117,18 +117,69 @@ async def fetch_github_projects(github_url: str) -> List[Dict[str, Any]]:
     # Prepend portfolio analysis entry to projects list
     return [summary_project] + projects
 
-def parse_linkedin_profile(linkedin_url: str) -> Dict[str, Any]:
-    username = extract_linkedin_username(linkedin_url)
-    if not username:
-        return {}
+def parse_pasted_experience(text: str) -> List[Dict[str, Any]]:
+    if not text or not text.strip():
+        return []
 
-    formatted_name = clean_linkedin_name(username)
-    return {
-        "full_name": formatted_name,
-        "headline": "Experienced Professional & Industry Specialist",
-        "linkedin": f"linkedin.com/in/{username}",
-        "summary": f"Dynamic professional with a proven track record of excellence in project delivery, strategic leadership, and technical collaboration. Connected on LinkedIn at linkedin.com/in/{username}.",
-        "experience": [
+    entries = []
+    # Split by blocks separated by double newlines or "---"
+    blocks = [b.strip() for b in re.split(r'\n\s*\n|---', text) if b.strip()]
+
+    for block in blocks:
+        lines = [line.strip() for line in block.split('\n') if line.strip()]
+        if not lines:
+            continue
+
+        title = lines[0]
+        company = lines[1] if len(lines) > 1 else "Company / Client"
+        dates = "Present"
+        location = ""
+        highlights = []
+
+        # Find dates or location in remaining lines
+        for line in lines[2:]:
+            if re.search(r'\b(19|20)\d{2}\b|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present', line, re.I) and not dates or dates == "Present":
+                dates = line
+            elif line.startswith(('-', '*', '•', '–')):
+                highlights.append(re.sub(r'^[-*•–]\s*', '', line))
+            elif not highlights and len(line.split()) < 6 and not location:
+                location = line
+            else:
+                highlights.append(line)
+
+        entries.append({
+            "title": title,
+            "company": company,
+            "location": location or "Remote / Office",
+            "dates": dates,
+            "highlights": highlights or [f"Drove key operational initiatives and delivered impactful project outcomes for {company}."]
+        })
+
+    return entries
+
+
+def parse_linkedin_profile(linkedin_url: str, about_text: Optional[str] = None, experience_text: Optional[str] = None) -> Dict[str, Any]:
+    username = extract_linkedin_username(linkedin_url) or "linkedin-user"
+    formatted_name = clean_linkedin_name(username) if username != "linkedin-user" else ""
+
+    summary_content = (about_text.strip() if about_text and about_text.strip() else None)
+    if not summary_content and username != "linkedin-user":
+        summary_content = f"Dynamic professional with a proven track record of excellence in project delivery, strategic leadership, and technical collaboration. Connected on LinkedIn at linkedin.com/in/{username}."
+
+    result = {}
+    if formatted_name:
+        result["full_name"] = formatted_name
+        result["headline"] = "Experienced Professional & Industry Specialist"
+        result["linkedin"] = f"linkedin.com/in/{username}"
+
+    if summary_content:
+        result["summary"] = summary_content
+
+    pasted_exp = parse_pasted_experience(experience_text) if experience_text else []
+    if pasted_exp:
+        result["experience"] = pasted_exp
+    else:
+        result["experience"] = [
             {
                 "title": "Senior Specialist / Industry Professional",
                 "company": "Enterprise Solutions Corporation",
@@ -139,14 +190,15 @@ def parse_linkedin_profile(linkedin_url: str) -> Dict[str, Any]:
                     "Implemented innovative workflows resulting in streamlined process efficiency."
                 ]
             }
-        ],
-        "education": [
-            {
-                "degree": "Bachelor of Science / Arts",
-                "institution": "University Academic Institution",
-                "location": "United States",
-                "dates": "2016 - 2020",
-                "details": "Focused on Technology, Analytics & Strategic Leadership"
-            }
         ]
-    }
+
+    result["education"] = [
+        {
+            "degree": "Bachelor of Science / Arts",
+            "institution": "University Academic Institution",
+            "location": "United States",
+            "dates": "2016 - 2020",
+            "details": "Focused on Technology, Analytics & Strategic Leadership"
+        }
+    ]
+    return result

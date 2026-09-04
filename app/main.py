@@ -27,6 +27,8 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 class ProfileImportRequest(BaseModel):
     linkedin_url: Optional[str] = None
+    linkedin_about: Optional[str] = None
+    linkedin_experience: Optional[str] = None
     github_url: Optional[str] = None
     base_resume: Optional[Dict[str, Any]] = None
 
@@ -102,9 +104,13 @@ async def import_profile(req: ProfileImportRequest = Body(...)):
             if gh_projects:
                 projects = gh_projects
 
-    # Process LinkedIn URL
-    if req.linkedin_url:
-        li_data = parse_linkedin_profile(req.linkedin_url)
+    # Process LinkedIn URL / About / Experience section
+    if req.linkedin_url or req.linkedin_about or req.linkedin_experience:
+        li_data = parse_linkedin_profile(
+            req.linkedin_url or "",
+            about_text=req.linkedin_about,
+            experience_text=req.linkedin_experience
+        )
         if li_data:
             if li_data.get("full_name"):
                 personal["full_name"] = li_data["full_name"]
@@ -116,7 +122,7 @@ async def import_profile(req: ProfileImportRequest = Body(...)):
                 base_data["summary"] = li_data["summary"]
             if li_data.get("experience"):
                 base_data["experience"] = li_data["experience"]
-            if li_data.get("education"):
+            if li_data.get("education") and not base_data.get("education"):
                 base_data["education"] = li_data["education"]
 
     base_data["personal_info"] = personal

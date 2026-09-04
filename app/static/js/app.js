@@ -135,10 +135,12 @@ async function loadSample(sampleId) {
 
 async function importFromProfileLinks() {
     const linkedinUrl = document.getElementById('import-linkedin-url').value.trim();
+    const linkedinAbout = document.getElementById('import-linkedin-about')?.value.trim() || '';
+    const linkedinExperience = document.getElementById('import-linkedin-experience')?.value.trim() || '';
     const githubUrl = document.getElementById('import-github-url').value.trim();
 
-    if (!linkedinUrl && !githubUrl) {
-        alert('Please enter a LinkedIn or GitHub link/username to import.');
+    if (!linkedinUrl && !linkedinAbout && !linkedinExperience && !githubUrl) {
+        alert('Please enter a LinkedIn link, About section, Work Experience text, or GitHub username to import.');
         return;
     }
 
@@ -150,6 +152,8 @@ async function importFromProfileLinks() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 linkedin_url: linkedinUrl,
+                linkedin_about: linkedinAbout,
+                linkedin_experience: linkedinExperience,
                 github_url: githubUrl,
                 base_resume: currentResumeData
             })
