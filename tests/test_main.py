@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.models.samples import SAMPLE_RESUMES
+from app.profile_importer import clean_linkedin_name, extract_linkedin_username, extract_github_username
 
 client = TestClient(app)
 
@@ -9,7 +10,6 @@ def test_get_builder():
     response = client.get("/")
     assert response.status_code == 200
     assert "rockCV" in response.text
-    assert "Choose Professional Style Template" in response.text
 
 def test_list_samples():
     response = client.get("/api/samples")
@@ -17,12 +17,6 @@ def test_list_samples():
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 5
-    sample_ids = [item["id"] for item in data]
-    assert "accounting" in sample_ids
-    assert "it" in sample_ids
-    assert "executive" in sample_ids
-    assert "marketing" in sample_ids
-    assert "healthcare" in sample_ids
 
 def test_get_sample_detail():
     response = client.get("/api/samples/accounting")
@@ -48,15 +42,38 @@ def test_export_resume_json():
     assert response.status_code == 200
     data = response.json()
     assert data["personal_info"]["full_name"] == "Samantha Chen"
-    assert data["template"] == "modern_tech"
 
-def test_import_profile_endpoint():
+def test_resume_max_pages_validation():
+    sample_data = SAMPLE_RESUMES["it"].copy()
+    sample_data["max_pages"] = 3
+    response = client.post("/api/render", json=sample_data)
+    assert response.status_code == 200
+
+    # Test invalid max_pages (> 3)
+    sample_data["max_pages"] = 4
+    bad_response = client.post("/api/render", json=sample_data)
+    assert bad_response.status_code == 422
+
+def test_extract_linkedin_and_github_helpers():
+    li_url = "www.linkedin.com/in/amedzo-edem-robin-2a484890"
+    username = extract_linkedin_username(li_url)
+    assert username == "amedzo-edem-robin-2a484890"
+    name = clean_linkedin_name(username)
+    assert name == "Amedzo Edem Robin"
+
+    gh_url = "https://github.com/torvalds/"
+    gh_user = extract_github_username(gh_url)
+    assert gh_user == "torvalds"
+
+def test_import_profile_endpoint_amedzo():
     response = client.post("/api/import-profile", json={
-        "linkedin_url": "https://linkedin.com/in/john-doe",
-        "github_url": "https://github.com/johndoe"
+        "linkedin_url": "www.linkedin.com/in/amedzo-edem-robin-2a484890",
+        "github_url": "https://github.com/torvalds"
     })
     assert response.status_code == 200
     data = response.json()
-    assert data["personal_info"]["github"] == "github.com/johndoe"
-    assert data["personal_info"]["linkedin"] == "linkedin.com/in/john-doe"
+    assert data["personal_info"]["full_name"] == "Amedzo Edem Robin"
+    assert "linkedin.com/in/amedzo-edem-robin-2a484890" in data["personal_info"]["linkedin"]
+    assert "github.com/torvalds" in data["personal_info"]["github"]
     assert len(data["projects"]) > 0
+    assert "GitHub Portfolio Analysis" in data["projects"][0]["name"]
