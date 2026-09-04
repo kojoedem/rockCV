@@ -65,6 +65,12 @@ function initEventListeners() {
         renderPreviewDebounced();
     });
 
+    // Profile Importer Button
+    const buildProfileBtn = document.getElementById('build-profile-cv-btn');
+    if (buildProfileBtn) {
+        buildProfileBtn.addEventListener('click', importFromProfileLinks);
+    }
+
     // Add buttons
     document.getElementById('add-exp-btn').addEventListener('click', () => addExperienceItem());
     document.getElementById('add-edu-btn').addEventListener('click', () => addEducationItem());
@@ -116,6 +122,43 @@ async function loadSample(sampleId) {
         renderPreview();
     } catch (err) {
         console.error('Failed to load sample:', err);
+    }
+}
+
+async function importFromProfileLinks() {
+    const linkedinUrl = document.getElementById('import-linkedin-url').value.trim();
+    const githubUrl = document.getElementById('import-github-url').value.trim();
+
+    if (!linkedinUrl && !githubUrl) {
+        alert('Please enter a LinkedIn or GitHub link/username to import.');
+        return;
+    }
+
+    collectFormData();
+
+    try {
+        const response = await fetch('/api/import-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                linkedin_url: linkedinUrl,
+                github_url: githubUrl,
+                base_resume: currentResumeData
+            })
+        });
+
+        if (!response.ok) {
+            alert('Failed to import profile.');
+            return;
+        }
+
+        const data = await response.json();
+        currentResumeData = data;
+        populateForm(data);
+        renderPreview();
+    } catch (err) {
+        console.error('Error importing profile:', err);
+        alert('Error importing profile.');
     }
 }
 

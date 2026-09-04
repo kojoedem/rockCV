@@ -49,3 +49,14 @@ def test_export_resume_json():
     data = response.json()
     assert data["personal_info"]["full_name"] == "Samantha Chen"
     assert data["template"] == "modern_tech"
+
+def test_import_profile_endpoint():
+    response = client.post("/api/import-profile", json={
+        "linkedin_url": "https://linkedin.com/in/john-doe",
+        "github_url": "https://github.com/johndoe"
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["personal_info"]["github"] == "github.com/johndoe"
+    assert data["personal_info"]["linkedin"] == "linkedin.com/in/john-doe"
+    assert len(data["projects"]) > 0
