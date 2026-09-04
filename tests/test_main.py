@@ -66,8 +66,11 @@ def test_extract_linkedin_and_github_helpers():
     assert gh_user == "torvalds"
 
 def test_import_profile_endpoint_amedzo():
+    pasted_exp = "Lead Systems Architect\nTech Global Solutions\n2022 - Present\nSan Francisco, CA\n- Architected high-throughput FastAPI microservices.\n- Managed a team of 12 software engineers."
     response = client.post("/api/import-profile", json={
         "linkedin_url": "www.linkedin.com/in/amedzo-edem-robin-2a484890",
+        "linkedin_about": "Accomplished software engineer specializing in scalable FastAPI microservices and frontend design.",
+        "linkedin_experience": pasted_exp,
         "github_url": "https://github.com/torvalds"
     })
     assert response.status_code == 200
@@ -75,5 +78,10 @@ def test_import_profile_endpoint_amedzo():
     assert data["personal_info"]["full_name"] == "Amedzo Edem Robin"
     assert "linkedin.com/in/amedzo-edem-robin-2a484890" in data["personal_info"]["linkedin"]
     assert "github.com/torvalds" in data["personal_info"]["github"]
+    assert data["summary"] == "Accomplished software engineer specializing in scalable FastAPI microservices and frontend design."
+    assert len(data["experience"]) == 1
+    assert data["experience"][0]["title"] == "Lead Systems Architect"
+    assert data["experience"][0]["company"] == "Tech Global Solutions"
+    assert "Architected high-throughput FastAPI microservices." in data["experience"][0]["highlights"]
     assert len(data["projects"]) > 0
     assert "GitHub Portfolio Analysis" in data["projects"][0]["name"]
